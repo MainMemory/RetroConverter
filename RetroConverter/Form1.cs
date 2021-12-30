@@ -156,126 +156,7 @@ namespace RetroConverter
 										if (ch.Blocks[x, y].Block == 0)
 											ch.Blocks[x, y].Block = 0x3FF;
 							}
-							List<Chunk> tmpchnk;
-							switch (LevelData.Level.ChunkFormat)
-							{
-								case EngineVersion.S1:
-								case EngineVersion.SCD:
-								case EngineVersion.SCDPC:
-									tmpchnk = new List<Chunk>() { new Chunk() };
-									LevelData.ColInds2 = new List<byte>(LevelData.ColInds1);
-									Dictionary<ushort, ushort[]> cnkinds = new Dictionary<ushort, ushort[]>() { { 0, new ushort[4] } };
-									List<ushort> usedcnks =
-										LevelData.Layout.FGLayout.Cast<ushort>().Concat(LevelData.Layout.BGLayout.Cast<ushort>()).Distinct().ToList();
-									usedcnks.Remove(0);
-									foreach (ushort usedcnk in usedcnks)
-									{
-										Chunk item = LevelData.Chunks[usedcnk];
-										Chunk[] newchnk = new Chunk[4];
-										for (int i = 0; i < 4; i++)
-											newchnk[i] = new Chunk();
-										for (int y = 0; y < 8; y++)
-											for (int x = 0; x < 8; x++)
-											{
-												S2ChunkBlock blk = (S2ChunkBlock)newchnk[0].Blocks[x, y];
-												blk.Block = item.Blocks[x, y].Block;
-												blk.Solid1 = item.Blocks[x, y].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x, y].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x, y].Block];
-												}
-												blk.XFlip = item.Blocks[x, y].XFlip;
-												blk.YFlip = item.Blocks[x, y].YFlip;
-												blk = (S2ChunkBlock)newchnk[1].Blocks[x, y];
-												blk.Block = item.Blocks[x + 8, y].Block;
-												blk.Solid1 = item.Blocks[x + 8, y].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y].Block];
-												}
-												blk.XFlip = item.Blocks[x + 8, y].XFlip;
-												blk.YFlip = item.Blocks[x + 8, y].YFlip;
-												blk = (S2ChunkBlock)newchnk[2].Blocks[x, y];
-												blk.Block = item.Blocks[x, y + 8].Block;
-												blk.Solid1 = item.Blocks[x, y + 8].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x, y + 8].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x, y + 8].Block];
-												}
-												blk.XFlip = item.Blocks[x, y + 8].XFlip;
-												blk.YFlip = item.Blocks[x, y + 8].YFlip;
-												blk = (S2ChunkBlock)newchnk[3].Blocks[x, y];
-												blk.Block = item.Blocks[x + 8, y + 8].Block;
-												blk.Solid1 = item.Blocks[x + 8, y + 8].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y + 8].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y + 8].Block];
-												}
-												blk.XFlip = item.Blocks[x + 8, y + 8].XFlip;
-												blk.YFlip = item.Blocks[x + 8, y + 8].YFlip;
-											}
-										ushort[] ids = new ushort[4];
-										for (int i = 0; i < 4; i++)
-										{
-											byte[] b = newchnk[i].GetBytes();
-											int match = -1;
-											for (int c = 0; c < tmpchnk.Count; c++)
-												if (b.FastArrayEqual(tmpchnk[c].GetBytes()))
-												{
-													match = c;
-													break;
-												}
-											if (match != -1)
-												ids[i] = (ushort)match;
-											else
-											{
-												ids[i] = (ushort)tmpchnk.Count;
-												tmpchnk.Add(newchnk[i]);
-											}
-										}
-										cnkinds.Add(usedcnk, ids);
-									}
-									ushort[,] newFG = new ushort[LevelData.FGWidth * 2, LevelData.FGHeight * 2];
-									for (int y = 0; y < LevelData.FGHeight; y++)
-										for (int x = 0; x < LevelData.FGWidth; x++)
-											if (LevelData.Layout.FGLayout[x, y] != 0)
-											{
-												ushort[] ids = cnkinds[LevelData.Layout.FGLayout[x, y]];
-												newFG[x * 2, y * 2] = ids[0];
-												newFG[(x * 2) + 1, y * 2] = ids[1];
-												newFG[x * 2, (y * 2) + 1] = ids[2];
-												newFG[(x * 2) + 1, (y * 2) + 1] = ids[3];
-											}
-									LevelData.Layout.FGLayout = newFG;
-									ushort[,] newBG = new ushort[LevelData.BGWidth * 2, LevelData.BGHeight * 2];
-									for (int y = 0; y < LevelData.BGHeight; y++)
-										for (int x = 0; x < LevelData.BGWidth; x++)
-											if (LevelData.Layout.BGLayout[x, y] != 0)
-											{
-												ushort[] ids = cnkinds[LevelData.Layout.BGLayout[x, y]];
-												newBG[x * 2, y * 2] = ids[0];
-												newBG[(x * 2) + 1, y * 2] = ids[1];
-												newBG[x * 2, (y * 2) + 1] = ids[2];
-												newBG[(x * 2) + 1, (y * 2) + 1] = ids[3];
-											}
-									LevelData.Layout.BGLayout = newBG;
-									break;
-								default:
-									tmpchnk = LevelData.Chunks.ToList();
-									break;
-							}
+							List<Chunk> tmpchnk = ConvertChunks();
 							if (bgchunks.Contains(0))
 							{
 								for (int y = 0; y < LevelData.BGHeight; y++)
@@ -478,126 +359,7 @@ namespace RetroConverter
 										if (ch.Blocks[x, y].Block == 0)
 											ch.Blocks[x, y].Block = 0x3FF;
 							}
-							List<Chunk> tmpchnk;
-							switch (LevelData.Level.ChunkFormat)
-							{
-								case EngineVersion.S1:
-								case EngineVersion.SCD:
-								case EngineVersion.SCDPC:
-									tmpchnk = new List<Chunk>() { new Chunk() };
-									LevelData.ColInds2 = new List<byte>(LevelData.ColInds1);
-									Dictionary<ushort, ushort[]> cnkinds = new Dictionary<ushort, ushort[]>() { { 0, new ushort[4] } };
-									List<ushort> usedcnks =
-										LevelData.Layout.FGLayout.Cast<ushort>().Concat(LevelData.Layout.BGLayout.Cast<ushort>()).Distinct().ToList();
-									usedcnks.Remove(0);
-									foreach (ushort usedcnk in usedcnks)
-									{
-										Chunk item = LevelData.Chunks[usedcnk];
-										Chunk[] newchnk = new Chunk[4];
-										for (int i = 0; i < 4; i++)
-											newchnk[i] = new Chunk();
-										for (int y = 0; y < 8; y++)
-											for (int x = 0; x < 8; x++)
-											{
-												S2ChunkBlock blk = (S2ChunkBlock)newchnk[0].Blocks[x, y];
-												blk.Block = item.Blocks[x, y].Block;
-												blk.Solid1 = item.Blocks[x, y].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x, y].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x, y].Block];
-												}
-												blk.XFlip = item.Blocks[x, y].XFlip;
-												blk.YFlip = item.Blocks[x, y].YFlip;
-												blk = (S2ChunkBlock)newchnk[1].Blocks[x, y];
-												blk.Block = item.Blocks[x + 8, y].Block;
-												blk.Solid1 = item.Blocks[x + 8, y].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y].Block];
-												}
-												blk.XFlip = item.Blocks[x + 8, y].XFlip;
-												blk.YFlip = item.Blocks[x + 8, y].YFlip;
-												blk = (S2ChunkBlock)newchnk[2].Blocks[x, y];
-												blk.Block = item.Blocks[x, y + 8].Block;
-												blk.Solid1 = item.Blocks[x, y + 8].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x, y + 8].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x, y + 8].Block];
-												}
-												blk.XFlip = item.Blocks[x, y + 8].XFlip;
-												blk.YFlip = item.Blocks[x, y + 8].YFlip;
-												blk = (S2ChunkBlock)newchnk[3].Blocks[x, y];
-												blk.Block = item.Blocks[x + 8, y + 8].Block;
-												blk.Solid1 = item.Blocks[x + 8, y + 8].Solid1;
-												blk.Solid2 = blk.Solid1;
-												if (LevelData.Level.LoopChunks.Contains((byte)usedcnk))
-												{
-													blk.Solid2 = LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y + 8].Solid1;
-													if (blk.Block < LevelData.ColInds2.Count)
-														LevelData.ColInds2[blk.Block] = LevelData.ColInds1[LevelData.Chunks[usedcnk + 1].Blocks[x + 8, y + 8].Block];
-												}
-												blk.XFlip = item.Blocks[x + 8, y + 8].XFlip;
-												blk.YFlip = item.Blocks[x + 8, y + 8].YFlip;
-											}
-										ushort[] ids = new ushort[4];
-										for (int i = 0; i < 4; i++)
-										{
-											byte[] b = newchnk[i].GetBytes();
-											int match = -1;
-											for (int c = 0; c < tmpchnk.Count; c++)
-												if (b.FastArrayEqual(tmpchnk[c].GetBytes()))
-												{
-													match = c;
-													break;
-												}
-											if (match != -1)
-												ids[i] = (ushort)match;
-											else
-											{
-												ids[i] = (ushort)tmpchnk.Count;
-												tmpchnk.Add(newchnk[i]);
-											}
-										}
-										cnkinds.Add(usedcnk, ids);
-									}
-									ushort[,] newFG = new ushort[LevelData.FGWidth * 2, LevelData.FGHeight * 2];
-									for (int y = 0; y < LevelData.FGHeight; y++)
-										for (int x = 0; x < LevelData.FGWidth; x++)
-											if (LevelData.Layout.FGLayout[x, y] != 0)
-											{
-												ushort[] ids = cnkinds[LevelData.Layout.FGLayout[x, y]];
-												newFG[x * 2, y * 2] = ids[0];
-												newFG[(x * 2) + 1, y * 2] = ids[1];
-												newFG[x * 2, (y * 2) + 1] = ids[2];
-												newFG[(x * 2) + 1, (y * 2) + 1] = ids[3];
-											}
-									LevelData.Layout.FGLayout = newFG;
-									ushort[,] newBG = new ushort[LevelData.BGWidth * 2, LevelData.BGHeight * 2];
-									for (int y = 0; y < LevelData.BGHeight; y++)
-										for (int x = 0; x < LevelData.BGWidth; x++)
-											if (LevelData.Layout.BGLayout[x, y] != 0)
-											{
-												ushort[] ids = cnkinds[LevelData.Layout.BGLayout[x, y]];
-												newBG[x * 2, y * 2] = ids[0];
-												newBG[(x * 2) + 1, y * 2] = ids[1];
-												newBG[x * 2, (y * 2) + 1] = ids[2];
-												newBG[(x * 2) + 1, (y * 2) + 1] = ids[3];
-											}
-									LevelData.Layout.BGLayout = newBG;
-									break;
-								default:
-									tmpchnk = LevelData.Chunks.ToList();
-									break;
-							}
+							List<Chunk> tmpchnk = ConvertChunks();
 							if (bgchunks.Contains(0))
 							{
 								for (int y = 0; y < LevelData.BGHeight; y++)
@@ -735,6 +497,120 @@ namespace RetroConverter
 			}
 		}
 
-		byte[] SolidMap = { 3, 1, 2, 0 };
+		private static List<Chunk> ConvertChunks()
+		{
+			int w = LevelData.Level.ChunkWidth / 16;
+			int h = LevelData.Level.ChunkHeight / 16;
+			if (LevelData.Chunks[0].Blocks[0, 0] is S1ChunkBlock)
+			{
+				LevelData.ColInds2 = new List<byte>(LevelData.ColInds1);
+				for (int item = 0; item < LevelData.Chunks.Count; item++)
+				{
+					Chunk cnk = LevelData.Chunks[item];
+					Chunk cnk2 = LevelData.Chunks[item + 1];
+					for (int y = 0; y < h; y++)
+						for (int x = 0; x < w; x++)
+						{
+							ChunkBlock old = cnk.Blocks[x, y];
+							ChunkBlock old2 = cnk2.Blocks[x, y];
+							Solidity solid2 = old.Solid1;
+							if (LevelData.Level.LoopChunks.Contains((byte)item))
+							{
+								solid2 = old2.Solid1;
+								if (old.Block < LevelData.ColInds2.Count)
+									LevelData.ColInds2[old.Block] = LevelData.ColInds1[old2.Block];
+							}
+							cnk.Blocks[x, y] = new S2ChunkBlock() { Block = old.Block, Solid1 = old.Solid1, Solid2 = solid2, XFlip = old.XFlip, YFlip = old.YFlip };
+						}
+				}
+			}
+			LevelData.Level.ChunkFormat = EngineVersion.S2;
+			if (LevelData.Level.ChunkWidth != 128 || LevelData.Level.ChunkHeight != 128)
+			{
+				LevelData.Level.ChunkWidth = 128;
+				LevelData.Level.ChunkHeight = 128;
+				List<Chunk> tmpchnk = new List<Chunk>() { new Chunk() };
+				List<byte[]> cnkbytes = new List<byte[]>() { tmpchnk[0].GetBytes() };
+				ChunkBlock[,] blocks = new ChunkBlock[LevelData.FGWidth * w, LevelData.FGHeight * h];
+				for (int y = 0; y < LevelData.FGHeight; y++)
+					for (int x = 0; x < LevelData.FGWidth; x++)
+					{
+						Chunk cnk = LevelData.Chunks[LevelData.Layout.FGLayout[x, y]];
+						if (cnk != null)
+							for (int cy = 0; cy < h; cy++)
+								for (int cx = 0; cx < w; cx++)
+									blocks[x * w + cx, y * h + cy] = cnk.Blocks[cx, cy];
+					}
+				int newwidth = Math.DivRem(blocks.GetLength(0), 8, out int rem);
+				if (rem != 0)
+					++newwidth;
+				int newheight = Math.DivRem(blocks.GetLength(1), 8, out rem);
+				if (rem != 0)
+					++newheight;
+				LevelData.ResizeFG(newwidth, newheight);
+				for (int y = 0; y < newheight; y++)
+					for (int x = 0; x < newwidth; x++)
+					{
+						Chunk cnk = new Chunk();
+						for (int cy = 0; cy < 8; cy++)
+							if (y * 8 + cy < newheight)
+								for (int cx = 0; cx < 8; cx++)
+									if (x * 8 + cx < newwidth)
+										cnk.Blocks[cx, cy] = blocks[x * 8 + cx, y * 8 + cy];
+						byte[] tmp = cnk.GetBytes();
+						int id = cnkbytes.FindIndex(a => a.FastArrayEqual(tmp));
+						if (id == -1)
+						{
+							LevelData.Layout.FGLayout[x, y] = (ushort)tmpchnk.Count;
+							tmpchnk.Add(cnk);
+							cnkbytes.Add(tmp);
+						}
+						else
+							LevelData.Layout.FGLayout[x, y] = (ushort)id;
+					}
+				blocks = new ChunkBlock[LevelData.BGWidth * w, LevelData.BGHeight * h];
+				for (int y = 0; y < LevelData.BGHeight; y++)
+					for (int x = 0; x < LevelData.BGWidth; x++)
+					{
+						Chunk cnk = LevelData.Chunks[LevelData.Layout.BGLayout[x, y]];
+						if (cnk != null)
+							for (int cy = 0; cy < h; cy++)
+								for (int cx = 0; cx < w; cx++)
+									blocks[x * w + cx, y * h + cy] = cnk.Blocks[cx, cy];
+					}
+				newwidth = Math.DivRem(blocks.GetLength(0), 8, out rem);
+				if (rem != 0)
+					++newwidth;
+				newheight = Math.DivRem(blocks.GetLength(1), 8, out rem);
+				if (rem != 0)
+					++newheight;
+				LevelData.ResizeBG(newwidth, newheight);
+				for (int y = 0; y < newheight; y++)
+					for (int x = 0; x < newwidth; x++)
+					{
+						Chunk cnk = new Chunk();
+						for (int cy = 0; cy < 8; cy++)
+							if (y * 8 + cy < newheight)
+								for (int cx = 0; cx < 8; cx++)
+									if (x * 8 + cx < newwidth)
+										cnk.Blocks[cx, cy] = blocks[x * 8 + cx, y * 8 + cy];
+						byte[] tmp = cnk.GetBytes();
+						int id = cnkbytes.FindIndex(a => a.FastArrayEqual(tmp));
+						if (id == -1)
+						{
+							LevelData.Layout.BGLayout[x, y] = (ushort)tmpchnk.Count;
+							tmpchnk.Add(cnk);
+							cnkbytes.Add(tmp);
+						}
+						else
+							LevelData.Layout.BGLayout[x, y] = (ushort)id;
+					}
+				return tmpchnk;
+			}
+			else
+				return LevelData.Chunks.ToList();
+		}
+
+		readonly byte[] SolidMap = { 3, 1, 2, 0 };
 	}
 }
