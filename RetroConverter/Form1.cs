@@ -216,7 +216,10 @@ namespace RetroConverter
 									{
 										case 1:
 											col.CollisionPath1[i].HasCollision[j] = true;
-											col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											if (col.CollisionPath1[i].isCeiling && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
+												col.CollisionPath1[i].Collision[j] = 15;
+											else
+												col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 										case -1:
 											col.CollisionPath1[i].HasCollision[j] = true;
@@ -235,7 +238,10 @@ namespace RetroConverter
 									{
 										case 1:
 											col.CollisionPath2[i].HasCollision[j] = true;
-											col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											if (col.CollisionPath2[i].isCeiling && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
+												col.CollisionPath2[i].Collision[j] = 15;
+											else
+												col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 										case -1:
 											col.CollisionPath2[i].HasCollision[j] = true;
@@ -419,7 +425,10 @@ namespace RetroConverter
 									{
 										case 1:
 											col.CollisionPath1[i].HasCollision[j] = true;
-											col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											if (col.CollisionPath1[i].isCeiling && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
+												col.CollisionPath1[i].Collision[j] = 15;
+											else
+												col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 										case -1:
 											col.CollisionPath1[i].HasCollision[j] = true;
@@ -438,7 +447,10 @@ namespace RetroConverter
 									{
 										case 1:
 											col.CollisionPath2[i].HasCollision[j] = true;
-											col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											if (col.CollisionPath2[i].isCeiling && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
+												col.CollisionPath2[i].Collision[j] = 15;
+											else
+												col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 										case -1:
 											col.CollisionPath2[i].HasCollision[j] = true;
@@ -566,7 +578,10 @@ namespace RetroConverter
 									{
 										case 1:
 											col.CollisionPath1[i].HasCollision[j] = true;
-											col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											if (col.CollisionPath1[i].IsCeiling && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
+												col.CollisionPath1[i].Collision[j] = 15;
+											else
+												col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 										case -1:
 											col.CollisionPath1[i].HasCollision[j] = true;
@@ -585,7 +600,10 @@ namespace RetroConverter
 									{
 										case 1:
 											col.CollisionPath2[i].HasCollision[j] = true;
-											col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											if (col.CollisionPath2[i].IsCeiling && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
+												col.CollisionPath2[i].Collision[j] = 15;
+											else
+												col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 										case -1:
 											col.CollisionPath2[i].HasCollision[j] = true;
