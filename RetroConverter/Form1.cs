@@ -74,14 +74,15 @@ namespace RetroConverter
 
 		private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
 		{
+			textBox1.Enabled = button4.Enabled = comboBox2.SelectedIndex == 0;
 			if (comboBox2.SelectedIndex == 3)
 			{
-				button3.Enabled = textBox1.Enabled = button4.Enabled = false;
+				button3.Enabled = false;
 				if (comboBox1.SelectedIndex > -1) button2.Enabled = true;
 			}
 			else
 			{
-				button3.Enabled = textBox1.Enabled = button4.Enabled = true;
+				button3.Enabled = true;
 				button2.Enabled = false;
 			}
 			gameConfig = null;
@@ -151,6 +152,12 @@ namespace RetroConverter
 							cfg.ObjectsNames = newobjs;
 							foreach (string name in newobjs)
 								cfg.ScriptPaths.Add(LevelData.Level.DisplayName + "\\" + name + ".txt");
+							if (!string.IsNullOrWhiteSpace(textBox1.Text))
+							{
+								objNames.Add(Path.GetFileNameWithoutExtension(textBox1.Text));
+								newobjs.Add(Path.GetFileNameWithoutExtension(textBox1.Text));
+								cfg.ScriptPaths.Add(textBox1.Text);
+							}
 							cfg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgchunks = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList();
 							List<ushort> bgblocks = bgchunks.Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
@@ -670,10 +677,10 @@ namespace RetroConverter
 						for (int x = 0; x < w; x++)
 						{
 							ChunkBlock old = cnk.Blocks[x, y];
-							ChunkBlock old2 = cnk2.Blocks[x, y];
 							Solidity solid2 = old.Solid1;
 							if (LevelData.Level.LoopChunks.Contains((byte)item))
 							{
+								ChunkBlock old2 = cnk2.Blocks[x, y];
 								solid2 = old2.Solid1;
 								if (old.Block < LevelData.ColInds2.Count)
 									LevelData.ColInds2[old.Block] = LevelData.ColInds1[old2.Block];
