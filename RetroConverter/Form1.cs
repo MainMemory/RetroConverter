@@ -204,7 +204,7 @@ namespace RetroConverter
 							Tileconfig3 col = new Tileconfig3();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
 							{
-								col.CollisionPath1[i].isCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Sum(a => Math.Sign(a)) < 0;
+								col.CollisionPath1[i].isCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
 								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
 								if (col.CollisionPath1[i].FloorAngle == 0xFF)
 									col.CollisionPath1[i].FloorAngle = 0;
@@ -407,7 +407,7 @@ namespace RetroConverter
 							Tileconfig4 col = new Tileconfig4();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
 							{
-								col.CollisionPath1[i].isCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Sum(a => Math.Sign(a)) < 0;
+								col.CollisionPath1[i].isCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
 								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
 								if (col.CollisionPath1[i].FloorAngle == 0xFF)
 									col.CollisionPath1[i].FloorAngle = 0;
@@ -554,7 +554,7 @@ namespace RetroConverter
 							Tileconfig5 col = new Tileconfig5();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
 							{
-								col.CollisionPath1[i].IsCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Sum(a => Math.Sign(a)) < 0;
+								col.CollisionPath1[i].IsCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
 								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
 								if (col.CollisionPath1[i].FloorAngle == 0xFF)
 									col.CollisionPath1[i].FloorAngle = 0;
