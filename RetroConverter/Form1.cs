@@ -122,6 +122,11 @@ namespace RetroConverter
 							for (int l = 0; l < 2; l++)
 								for (int c = 0; c < 16; c++)
 									cfg.StagePalette.Colors[l][c] = new PaletteColour3(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
+							if (!string.IsNullOrWhiteSpace(textBox1.Text))
+							{
+								objNames.Add(Path.GetFileNameWithoutExtension(textBox1.Text));
+								cfg.ScriptPaths.Add(textBox1.Text);
+							}
 							int ringid = objNames.IndexOf("Ring");
 							List<string> newobjs = new List<string>();
 							Dictionary<byte, byte> objMap = new Dictionary<byte, byte>();
@@ -153,11 +158,7 @@ namespace RetroConverter
 							foreach (string name in newobjs)
 								cfg.ScriptPaths.Add(LevelData.Level.DisplayName + "\\" + name + ".txt");
 							if (!string.IsNullOrWhiteSpace(textBox1.Text))
-							{
-								objNames.Add(Path.GetFileNameWithoutExtension(textBox1.Text));
-								newobjs.Add(Path.GetFileNameWithoutExtension(textBox1.Text));
-								cfg.ScriptPaths.Add(textBox1.Text);
-							}
+								newobjs.Insert(0, Path.GetFileNameWithoutExtension(textBox1.Text));
 							cfg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgchunks = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList();
 							List<ushort> bgblocks = bgchunks.Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
@@ -725,9 +726,9 @@ namespace RetroConverter
 					{
 						Chunk cnk = new Chunk();
 						for (int cy = 0; cy < 8; cy++)
-							if (y * 8 + cy < newheight)
+							if (y * 8 + cy < blocks.GetLength(1))
 								for (int cx = 0; cx < 8; cx++)
-									if (x * 8 + cx < newwidth)
+									if (x * 8 + cx < blocks.GetLength(0))
 										cnk.Blocks[cx, cy] = blocks[x * 8 + cx, y * 8 + cy];
 						byte[] tmp = cnk.GetBytes();
 						int id = cnkbytes.FindIndex(a => a.FastArrayEqual(tmp));
@@ -762,9 +763,9 @@ namespace RetroConverter
 					{
 						Chunk cnk = new Chunk();
 						for (int cy = 0; cy < 8; cy++)
-							if (y * 8 + cy < newheight)
+							if (y * 8 + cy < blocks.GetLength(1))
 								for (int cx = 0; cx < 8; cx++)
-									if (x * 8 + cx < newwidth)
+									if (x * 8 + cx < blocks.GetLength(0))
 										cnk.Blocks[cx, cy] = blocks[x * 8 + cx, y * 8 + cy];
 						byte[] tmp = cnk.GetBytes();
 						int id = cnkbytes.FindIndex(a => a.FastArrayEqual(tmp));
