@@ -128,11 +128,13 @@ namespace RetroConverter
 			this.comboBox2.FormattingEnabled = true;
 			this.comboBox2.Items.AddRange(new object[] {
             "v3 (Sonic CD)",
-            "v4 (Sonic 1/Sonic 2)"});
+            "v4 (Sonic 1/Sonic 2)",
+            "v5 (Sonic Mania)"});
 			this.comboBox2.Location = new System.Drawing.Point(96, 43);
 			this.comboBox2.Name = "comboBox2";
 			this.comboBox2.Size = new System.Drawing.Size(230, 21);
 			this.comboBox2.TabIndex = 4;
+			this.comboBox2.SelectedIndexChanged += new System.EventHandler(this.comboBox2_SelectedIndexChanged);
 			// 
 			// openFileDialog2
 			// 

@@ -36,6 +36,9 @@
     <Reference Include="RSDKv2">
       <HintPath>..\RSDKv2.dll</HintPath>
     </Reference>
+    <Reference Include="RSDKv5">
+      <HintPath>..\RSDKv5.dll</HintPath>
+    </Reference>
     <Reference Include="RSDKvB">
       <HintPath>..\RSDKvB.dll</HintPath>
     </Reference>

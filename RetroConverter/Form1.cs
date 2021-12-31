@@ -22,6 +22,12 @@ using Scene4 = RSDKv4.Scene;
 using Stageconfig4 = RSDKv4.Stageconfig;
 using Tileconfig4 = RSDKv4.Tileconfig;
 using Tiles128x1284 = RSDKv4.Tiles128x128;
+using PaletteColor5 = RSDKv5.PaletteColor;
+using Scene5 = RSDKv5.Scene;
+using SceneLayer5 = RSDKv5.SceneLayer;
+using ScrollInfo5 = RSDKv5.ScrollInfo;
+using StageConfig5 = RSDKv5.StageConfig;
+using Tileconfig5 = RSDKv5.Tileconfig;
 
 namespace RetroConverter
 {
@@ -60,7 +66,25 @@ namespace RetroConverter
 
 		private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			button2.Enabled = comboBox1.SelectedIndex > -1 && gameConfig != null;
+			if (comboBox2.SelectedIndex == 3)
+				button2.Enabled = comboBox1.SelectedIndex > -1;
+			else
+				button2.Enabled = comboBox1.SelectedIndex > -1 && gameConfig != null;
+		}
+
+		private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			if (comboBox2.SelectedIndex == 3)
+			{
+				button3.Enabled = textBox1.Enabled = button4.Enabled = false;
+				if (comboBox1.SelectedIndex > -1) button2.Enabled = true;
+			}
+			else
+			{
+				button3.Enabled = textBox1.Enabled = button4.Enabled = true;
+				button2.Enabled = false;
+			}
+			gameConfig = null;
 		}
 
 		private void button3_Click(object sender, EventArgs e)
@@ -93,7 +117,7 @@ namespace RetroConverter
 							Gameconfig3 gc = new Gameconfig3(gameConfig);
 							List<string> objNames = gc.ObjectsNames;
 							LevelData.LoadLevel(Levels[comboBox1.SelectedIndex], true);
-							Stageconfig3 cfg = new Stageconfig3();
+							Stageconfig3 cfg = new Stageconfig3() { LoadGlobalScripts = true };
 							for (int l = 0; l < 2; l++)
 								for (int c = 0; c < 16; c++)
 									cfg.StagePalette.Colors[l][c] = new PaletteColour3(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
@@ -296,7 +320,7 @@ namespace RetroConverter
 							Gameconfig4 gc = new Gameconfig4(gameConfig);
 							List<string> objNames = gc.ObjectsNames;
 							LevelData.LoadLevel(Levels[comboBox1.SelectedIndex], true);
-							Stageconfig4 cfg = new Stageconfig4();
+							Stageconfig4 cfg = new Stageconfig4() { LoadGlobalScripts = true };
 							for (int l = 0; l < 2; l++)
 								for (int c = 0; c < 16; c++)
 									cfg.StagePalette.Colors[l][c] = new PaletteColour4(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
@@ -493,11 +517,145 @@ namespace RetroConverter
 							scene.Write(Path.Combine(folderBrowserDialog1.SelectedPath, $"Act{act}.bin"));
 						}
 						break;
+					case 2: // v5
+						{
+							LevelData.LoadLevel(Levels[comboBox1.SelectedIndex], true);
+							StageConfig5 cfg = new StageConfig5() { LoadGlobalObjects = true };
+							for (int l = 0; l < 2; l++)
+								for (int c = 0; c < 16; c++)
+									cfg.Palettes[0].Colors[l][c] = new PaletteColor5(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
+							cfg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "StageConfig.bin"));
+							List<ushort> bgblockids = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList().Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
+							BitmapBits blocks = new BitmapBits(16, 16384);
+							for (ushort i = 0; i < LevelData.CompBlockBmpBits.Count; i++)
+							{
+								LevelData.CompBlockBmpBits[i].IncrementIndexes(0x80);
+								if (i != 0 && bgblockids.Contains(i))
+									LevelData.CompBlockBmpBits[i].ReplaceColor(0, 0xA0);
+								blocks.DrawBitmap(LevelData.CompBlockBmpBits[i], 0, i * 16);
+							}
+							blocks.FillRectangle(0xA0, 0, 16368, 16, 16);
+							Color[] pal = new Color[256];
+							pal.Fill(Color.Fuchsia);
+							for (int l = 0; l < 4; l++)
+								for (int c = 0; c < 16; c++)
+									pal[0x80 + (l * 16) + c] = LevelData.Palette[0][l, c].RGBColor;
+							using (Bitmap bmp = blocks.ToBitmap(pal))
+								bmp.Save(Path.Combine(folderBrowserDialog1.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
+							MakeDualPath();
+							Tileconfig5 col = new Tileconfig5();
+							for (int i = 0; i < LevelData.ColInds1.Count; i++)
+							{
+								col.CollisionPath1[i].IsCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Sum(a => Math.Sign(a)) < 0;
+								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
+								if (col.CollisionPath1[i].FloorAngle == 0xFF)
+									col.CollisionPath1[i].FloorAngle = 0;
+								col.CollisionPath1[i].LWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x40);
+								col.CollisionPath1[i].CeilingAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x80);
+								col.CollisionPath1[i].RWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0xC0);
+								for (int j = 0; j < 16; j++)
+									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds1[i]][j]))
+									{
+										case 1:
+											col.CollisionPath1[i].HasCollision[j] = true;
+											col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											break;
+										case -1:
+											col.CollisionPath1[i].HasCollision[j] = true;
+											col.CollisionPath1[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											break;
+									}
+								col.CollisionPath2[i].FloorAngle = LevelData.Angles[LevelData.ColInds2[i]];
+								col.CollisionPath2[i].IsCeiling = LevelData.ColArr1[LevelData.ColInds2[i]].Sum(a => Math.Sign(a)) < 0;
+								if (col.CollisionPath2[i].FloorAngle == 0xFF)
+									col.CollisionPath2[i].FloorAngle = 0;
+								col.CollisionPath2[i].LWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x40);
+								col.CollisionPath2[i].CeilingAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x80);
+								col.CollisionPath2[i].RWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0xC0);
+								for (int j = 0; j < 16; j++)
+									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds2[i]][j]))
+									{
+										case 1:
+											col.CollisionPath2[i].HasCollision[j] = true;
+											col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											break;
+										case -1:
+											col.CollisionPath2[i].HasCollision[j] = true;
+											col.CollisionPath2[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											break;
+									}
+							}
+							col.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "TileConfig.bin"));
+							int w = LevelData.Level.ChunkWidth / 16;
+							int h = LevelData.Level.ChunkHeight / 16;
+							S2ChunkBlock[,] fgblocks = new S2ChunkBlock[LevelData.FGWidth * w, LevelData.FGHeight * h];
+							for (int y = 0; y < LevelData.FGHeight; y++)
+								for (int x = 0; x < LevelData.FGWidth; x++)
+								{
+									Chunk cnk = LevelData.Chunks[LevelData.Layout.FGLayout[x, y]];
+									if (cnk != null)
+										for (int cy = 0; cy < h; cy++)
+											for (int cx = 0; cx < w; cx++)
+												fgblocks[x * w + cx, y * h + cy] = (S2ChunkBlock)cnk.Blocks[cx, cy];
+								}
+							S2ChunkBlock[,] bgblocks = new S2ChunkBlock[LevelData.BGWidth * w, LevelData.BGHeight * h];
+							for (int y = 0; y < LevelData.BGHeight; y++)
+								for (int x = 0; x < LevelData.BGWidth; x++)
+								{
+									Chunk cnk = LevelData.Chunks[LevelData.Layout.BGLayout[x, y]];
+									if (cnk != null)
+										for (int cy = 0; cy < h; cy++)
+											for (int cx = 0; cx < w; cx++)
+											{
+												bgblocks[x * w + cx, y * h + cy] = (S2ChunkBlock)cnk.Blocks[cx, cy];
+												if (bgblocks[x * w + cx, y * h + cy].Block == 0)
+													bgblocks[x * w + cx, y * h + cy].Block = 0x3FF;
+											}
+								}
+							Scene5 scene = new Scene5();
+							SceneLayer5 layer = new SceneLayer5("Background", (ushort)(LevelData.BGWidth * w), (ushort)(LevelData.BGHeight * h));
+							layer.RelativeSpeed = 256;
+							layer.ScrollingInfo.Add(new ScrollInfo5());
+							for (int y = 0; y < LevelData.BGHeight * h; y++)
+								for (int x = 0; x < LevelData.BGWidth * w; x++)
+									layer.Tiles[y][x] = ByteConverter.ToUInt16(bgblocks[x, y].GetBytes(), 0);
+							scene.Layers.Add(layer);
+							layer = new SceneLayer5("FG Low", (ushort)(LevelData.FGWidth * w), (ushort)(LevelData.FGHeight * h));
+							layer.RelativeSpeed = 256;
+							layer.DrawingOrder = 1;
+							layer.ScrollingInfo.Add(new ScrollInfo5());
+							for (int y = 0; y < LevelData.FGHeight * h; y++)
+								for (int x = 0; x < LevelData.FGWidth * w; x++)
+								{
+									Block blk = LevelData.Blocks[fgblocks[x, y].Block];
+									if (blk != null && blk.Tiles.OfType<PatternIndex>().Count(a => a.Priority) < 2)
+										layer.Tiles[y][x] = ByteConverter.ToUInt16(fgblocks[x, y].GetBytes(), 0);
+								}
+							scene.Layers.Add(layer);
+							layer = new SceneLayer5("FG High", (ushort)(LevelData.FGWidth * w), (ushort)(LevelData.FGHeight * h));
+							layer.RelativeSpeed = 256;
+							layer.DrawingOrder = 2;
+							layer.ScrollingInfo.Add(new ScrollInfo5());
+							for (int y = 0; y < LevelData.FGHeight * h; y++)
+								for (int x = 0; x < LevelData.FGWidth * w; x++)
+								{
+									Block blk = LevelData.Blocks[fgblocks[x, y].Block];
+									if (blk != null && blk.Tiles.OfType<PatternIndex>().Count(a => a.Priority) > 1)
+										layer.Tiles[y][x] = ByteConverter.ToUInt16(fgblocks[x, y].GetBytes(), 0);
+								}
+							scene.Layers.Add(layer);
+							string act = "1";
+							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
+							if (actmatch.Success)
+								act = actmatch.Groups[1].Value;
+							scene.Write(Path.Combine(folderBrowserDialog1.SelectedPath, $"Scene{act}.bin"));
+						}
+						break;
 				}
 			}
 		}
 
-		private static List<Chunk> ConvertChunks()
+		private static void MakeDualPath()
 		{
 			int w = LevelData.Level.ChunkWidth / 16;
 			int h = LevelData.Level.ChunkHeight / 16;
@@ -523,8 +681,15 @@ namespace RetroConverter
 							cnk.Blocks[x, y] = new S2ChunkBlock() { Block = old.Block, Solid1 = old.Solid1, Solid2 = solid2, XFlip = old.XFlip, YFlip = old.YFlip };
 						}
 				}
+				LevelData.Level.ChunkFormat = EngineVersion.S2;
 			}
-			LevelData.Level.ChunkFormat = EngineVersion.S2;
+		}
+
+		private static List<Chunk> ConvertChunks()
+		{
+			MakeDualPath();
+			int w = LevelData.Level.ChunkWidth / 16;
+			int h = LevelData.Level.ChunkHeight / 16;
 			if (LevelData.Level.ChunkWidth != 128 || LevelData.Level.ChunkHeight != 128)
 			{
 				LevelData.Level.ChunkWidth = 128;
