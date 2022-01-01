@@ -252,7 +252,7 @@ namespace RetroConverter
 							col.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "CollisionMasks.bin"));
 							BGLayout3 bg = new BGLayout3();
 							bg.HLines.Add(new BGLayout3.ScrollInfo() { RelativeSpeed = 0x100 });
-							bg.Layers.Add(new BGLayout3.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight));
+							bg.Layers.Add(new BGLayout3.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight) { Behaviour = 1 });
 							for (int y = 0; y < LevelData.BGHeight; y++)
 								for (int x = 0; x < LevelData.BGWidth; x++)
 									bg.Layers[0].MapLayout[y][x] = LevelData.Layout.BGLayout[x, y];
@@ -461,7 +461,7 @@ namespace RetroConverter
 							col.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "CollisionMasks.bin"));
 							BGLayout4 bg = new BGLayout4();
 							bg.HLines.Add(new BGLayout4.ScrollInfo() { RelativeSpeed = 0x100 });
-							bg.Layers.Add(new BGLayout4.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight));
+							bg.Layers.Add(new BGLayout4.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight) { Behaviour = 1 });
 							for (int y = 0; y < LevelData.BGHeight; y++)
 								for (int x = 0; x < LevelData.BGWidth; x++)
 									bg.Layers[0].MapLayout[y][x] = LevelData.Layout.BGLayout[x, y];
@@ -640,6 +640,7 @@ namespace RetroConverter
 								}
 							Scene5 scene = new Scene5();
 							SceneLayer5 layer = new SceneLayer5("Background", (ushort)(LevelData.BGWidth * w), (ushort)(LevelData.BGHeight * h));
+							layer.Behaviour = 1;
 							layer.RelativeSpeed = 256;
 							layer.ScrollingInfo.Add(new ScrollInfo5());
 							for (int y = 0; y < LevelData.BGHeight * h; y++)
@@ -647,6 +648,7 @@ namespace RetroConverter
 									layer.Tiles[y][x] = ByteConverter.ToUInt16(bgblocks[x, y].GetBytes(), 0);
 							scene.Layers.Add(layer);
 							layer = new SceneLayer5("FG Low", (ushort)(LevelData.FGWidth * w), (ushort)(LevelData.FGHeight * h));
+							layer.Behaviour = 1;
 							layer.RelativeSpeed = 256;
 							layer.DrawingOrder = 1;
 							layer.ScrollingInfo.Add(new ScrollInfo5());
@@ -659,6 +661,7 @@ namespace RetroConverter
 								}
 							scene.Layers.Add(layer);
 							layer = new SceneLayer5("FG High", (ushort)(LevelData.FGWidth * w), (ushort)(LevelData.FGHeight * h));
+							layer.Behaviour = 1;
 							layer.RelativeSpeed = 256;
 							layer.DrawingOrder = 2;
 							layer.ScrollingInfo.Add(new ScrollInfo5());
@@ -706,6 +709,8 @@ namespace RetroConverter
 							}
 							cnk.Blocks[x, y] = new S2ChunkBlock() { Block = old.Block, Solid1 = old.Solid1, Solid2 = solid2, XFlip = old.XFlip, YFlip = old.YFlip };
 						}
+					if (LevelData.Level.LoopChunks.Contains((byte)item))
+						LevelData.Chunks[++item] = cnk;
 				}
 				LevelData.Level.ChunkFormat = EngineVersion.S2;
 			}
