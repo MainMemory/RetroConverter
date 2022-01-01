@@ -39,98 +39,158 @@ namespace RetroConverter
 		}
 
 		static readonly Regex actregex = new Regex("Act ([0-9]+)", RegexOptions.Compiled);
+		Settings settings = new Settings();
+		string settingsPath;
 		List<string> Levels;
 		string gameConfig = null;
 
 		private void Form1_Load(object sender, EventArgs e)
 		{
-			comboBox2.SelectedIndex = 0;
+			versionSelector.SelectedIndex = 0;
+			settingsPath = Path.Combine(Directory.GetCurrentDirectory(), "Settings.ini");
+			if (File.Exists(settingsPath))
+			{
+				settings = IniSerializer.Deserialize<Settings>(settingsPath);
+				versionSelector.SelectedIndex = Math.Min(Math.Max(settings.RSDKVer - 3, 0), versionSelector.Items.Count);
+				titleCardScriptBox.AutoCompleteCustomSource.AddRange(settings.TitleCards.ToArray());
+			}
 		}
 
-		private void button1_Click(object sender, EventArgs e)
+		private void Form1_FormClosed(object sender, FormClosedEventArgs e)
 		{
-			if (openFileDialog1.ShowDialog(this) == DialogResult.OK)
+			settings.RSDKVer = versionSelector.SelectedIndex + 3;
+			IniSerializer.Serialize(settings, settingsPath);
+		}
+
+		private void loadProjectButton_Click(object sender, EventArgs e)
+		{
+			if (openProjectDialog.ShowDialog(this) == DialogResult.OK)
+				LoadProject(openProjectDialog.FileName);
+		}
+
+		private void loadProjectButton_ShowMenu(object sender, EventArgs e)
+		{
+			if (settings.Projects.Count > 0)
 			{
-				LevelData.LoadGame(openFileDialog1.FileName);
-				comboBox1.BeginUpdate();
-				comboBox1.Items.Clear();
-				Levels = new List<string>();
-				foreach (KeyValuePair<string, LevelInfo> item in LevelData.Game.Levels)
+				mruMenuStrip.Items.Clear();
+				foreach (var item in settings.Projects)
 				{
-					Levels.Add(item.Key);
-					comboBox1.Items.Add(LevelData.Game.GetLevelInfo(item.Key).DisplayName);
+					string str = item;
+					if (str.Length > 60)
+						str = "…" + str.Substring(item.Length - 59);
+					mruMenuStrip.Items.Add(str, null, (s, e_) => LoadProject(item));
 				}
-				comboBox1.EndUpdate();
+				mruMenuStrip.Show(loadProjectButton, 0, loadProjectButton.Height);
 			}
 		}
 
-		private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+		private void LoadProject(string fileName)
 		{
-			if (comboBox2.SelectedIndex == 3)
-				button2.Enabled = comboBox1.SelectedIndex > -1;
-			else
-				button2.Enabled = comboBox1.SelectedIndex > -1 && gameConfig != null;
+			LevelData.LoadGame(fileName);
+			levelSelector.BeginUpdate();
+			levelSelector.Items.Clear();
+			Levels = new List<string>();
+			foreach (KeyValuePair<string, LevelInfo> item in LevelData.Game.Levels)
+			{
+				Levels.Add(item.Key);
+				levelSelector.Items.Add(LevelData.Game.GetLevelInfo(item.Key).DisplayName);
+			}
+			levelSelector.EndUpdate();
+			settings.Projects.Remove(fileName);
+			settings.Projects.Insert(0, fileName);
 		}
 
-		private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
+		private void levelSelector_SelectedIndexChanged(object sender, EventArgs e)
 		{
-			textBox1.Enabled = button4.Enabled = comboBox2.SelectedIndex == 0;
-			if (comboBox2.SelectedIndex == 3)
+			if (versionSelector.SelectedIndex == 3)
+				convertRSDKButton.Enabled = levelSelector.SelectedIndex > -1;
+			else
+				convertRSDKButton.Enabled = levelSelector.SelectedIndex > -1 && gameConfig != null;
+		}
+
+		private void versionSelector_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			titleCardScriptBox.Enabled = titleCardScriptButton.Enabled = versionSelector.SelectedIndex == 0;
+			if (versionSelector.SelectedIndex == 3)
 			{
-				button3.Enabled = false;
-				if (comboBox1.SelectedIndex > -1) button2.Enabled = true;
+				loadGameConfigButton.Enabled = false;
+				if (levelSelector.SelectedIndex > -1) convertRSDKButton.Enabled = true;
 			}
 			else
 			{
-				button3.Enabled = true;
-				button2.Enabled = false;
+				loadGameConfigButton.Enabled = true;
+				convertRSDKButton.Enabled = false;
 			}
 			gameConfig = null;
 		}
 
-		private void button3_Click(object sender, EventArgs e)
+		private void loadGameConfigButton_Click(object sender, EventArgs e)
 		{
-			if (openFileDialog2.ShowDialog(this) == DialogResult.OK)
+			if (openGameConfigDialog.ShowDialog(this) == DialogResult.OK)
+				LoadGameConfig(openGameConfigDialog.FileName);
+		}
+
+		private void loadGameConfigButton_ShowMenu(object sender, EventArgs e)
+		{
+			if (settings.GameConfigs.Count > 0)
 			{
-				gameConfig = openFileDialog2.FileName;
-				button2.Enabled = comboBox1.SelectedIndex > -1;
+				mruMenuStrip.Items.Clear();
+				foreach (var item in settings.GameConfigs)
+				{
+					string str = item;
+					if (str.Length > 60)
+						str = "…" + str.Substring(item.Length - 59);
+					mruMenuStrip.Items.Add(str, null, (s, e_) => LoadGameConfig(item));
+				}
+				mruMenuStrip.Show(loadProjectButton, 0, loadGameConfigButton.Height);
 			}
 		}
 
-		private void button4_Click(object sender, EventArgs e)
+		private void LoadGameConfig(string fileName)
 		{
-			if (openFileDialog3.ShowDialog(this) == DialogResult.OK)
+			gameConfig = fileName;
+			convertRSDKButton.Enabled = levelSelector.SelectedIndex > -1;
+			settings.GameConfigs.Remove(gameConfig);
+			settings.GameConfigs.Insert(0, gameConfig);
+		}
+
+		private void titleCardScriptButton_Click(object sender, EventArgs e)
+		{
+			if (titleCardScriptDialog.ShowDialog(this) == DialogResult.OK)
 			{
-				if (openFileDialog3.FileName.Contains("\\Scripts\\"))
-					textBox1.Text = openFileDialog3.FileName.Substring(openFileDialog3.FileName.LastIndexOf("\\Scripts\\") + 9).Replace('\\', '/');
+				if (titleCardScriptDialog.FileName.Contains("\\Scripts\\"))
+					titleCardScriptBox.Text = titleCardScriptDialog.FileName.Substring(titleCardScriptDialog.FileName.LastIndexOf("\\Scripts\\") + 9).Replace('\\', '/');
 			}
 		}
 
-		private void button2_Click(object sender, EventArgs e)
+		private void convertRSDKButton_Click(object sender, EventArgs e)
 		{
-			folderBrowserDialog1.SelectedPath = Environment.CurrentDirectory;
-			if (folderBrowserDialog1.ShowDialog(this) == DialogResult.OK)
+			rsdkExportDialog.SelectedPath = Environment.CurrentDirectory;
+			if (rsdkExportDialog.ShowDialog(this) == DialogResult.OK)
 			{
-				switch (comboBox2.SelectedIndex)
+				switch (versionSelector.SelectedIndex)
 				{
 					case 0: // v3
 						{
 							Gameconfig3 gc = new Gameconfig3(gameConfig);
 							List<string> objNames = gc.ObjectsNames;
-							LevelData.LoadLevel(Levels[comboBox1.SelectedIndex], true);
+							LevelData.LoadLevel(Levels[levelSelector.SelectedIndex], true);
 							Stageconfig3 cfg = new Stageconfig3() { LoadGlobalScripts = true };
 							for (int l = 0; l < 2; l++)
 								for (int c = 0; c < 16; c++)
 									cfg.StagePalette.Colors[l][c] = new PaletteColour3(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
-							if (!string.IsNullOrWhiteSpace(textBox1.Text))
+							if (!string.IsNullOrWhiteSpace(titleCardScriptBox.Text))
 							{
-								objNames.Add(Path.GetFileNameWithoutExtension(textBox1.Text));
-								cfg.ScriptPaths.Add(textBox1.Text);
+								settings.TitleCards.Remove(titleCardScriptBox.Text);
+								settings.TitleCards.Insert(0, titleCardScriptBox.Text);
+								titleCardScriptBox.AutoCompleteCustomSource.AddRange(settings.TitleCards.ToArray());
+								objNames.Add(Path.GetFileNameWithoutExtension(titleCardScriptBox.Text));
+								cfg.ScriptPaths.Add(titleCardScriptBox.Text);
 							}
 							int ringid = objNames.IndexOf("Ring");
 							List<string> newobjs = new List<string>();
 							Dictionary<byte, byte> objMap = new Dictionary<byte, byte>();
-							if (checkBox1.Checked)
+							if (includeObjectsCheckBox.Checked)
 							{
 								if (LevelData.RingFormat is RingLayoutFormat && ringid == -1)
 								{
@@ -157,9 +217,9 @@ namespace RetroConverter
 							cfg.ObjectsNames = newobjs;
 							foreach (string name in newobjs)
 								cfg.ScriptPaths.Add(LevelData.Level.DisplayName + "\\" + name + ".txt");
-							if (!string.IsNullOrWhiteSpace(textBox1.Text))
-								newobjs.Insert(0, Path.GetFileNameWithoutExtension(textBox1.Text));
-							cfg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "StageConfig.bin"));
+							if (!string.IsNullOrWhiteSpace(titleCardScriptBox.Text))
+								newobjs.Insert(0, Path.GetFileNameWithoutExtension(titleCardScriptBox.Text));
+							cfg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgchunks = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList();
 							List<ushort> bgblocks = bgchunks.Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
 							BitmapBits blocks = new BitmapBits(16, 16384);
@@ -177,7 +237,7 @@ namespace RetroConverter
 								for (int c = 0; c < 16; c++)
 									pal[0x80 + (l * 16) + c] = LevelData.Palette[0][l, c].RGBColor;
 							using (Bitmap bmp = blocks.ToBitmap(pal))
-								bmp.Save(Path.Combine(folderBrowserDialog1.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
+								bmp.Save(Path.Combine(rsdkExportDialog.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
 							foreach (ushort c in bgchunks)
 							{
 								if (c == 0) continue;
@@ -249,14 +309,14 @@ namespace RetroConverter
 											break;
 									}
 							}
-							col.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "CollisionMasks.bin"));
+							col.Write(Path.Combine(rsdkExportDialog.SelectedPath, "CollisionMasks.bin"));
 							BGLayout3 bg = new BGLayout3();
 							bg.HLines.Add(new BGLayout3.ScrollInfo() { RelativeSpeed = 0x100 });
 							bg.Layers.Add(new BGLayout3.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight) { Behaviour = 1 });
 							for (int y = 0; y < LevelData.BGHeight; y++)
 								for (int x = 0; x < LevelData.BGWidth; x++)
 									bg.Layers[0].MapLayout[y][x] = LevelData.Layout.BGLayout[x, y];
-							bg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "Backgrounds.bin"));
+							bg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "Backgrounds.bin"));
 							Tiles128x1283 chunks = new Tiles128x1283();
 							for (int i = 0; i < tmpchnk.Count; i++)
 								if (tmpchnk[i] != null)
@@ -278,7 +338,7 @@ namespace RetroConverter
 												chunks.BlockList[i].Mapping[y][x].VisualPlane = 1;
 										}
 								}
-							chunks.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "128x128Tiles.bin"));
+							chunks.Write(Path.Combine(rsdkExportDialog.SelectedPath, "128x128Tiles.bin"));
 							Scene3 scene = new Scene3
 							{
 								Title = LevelData.Level.DisplayName,
@@ -295,7 +355,7 @@ namespace RetroConverter
 							scene.objectTypeNames = objNames;
 							if (LevelData.StartPositions.Count > 0)
 								scene.objects.Add(new Object3((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
-							if (checkBox1.Checked)
+							if (includeObjectsCheckBox.Checked)
 								foreach (Entry ent in LevelData.Objects.Cast<Entry>().Concat(LevelData.Rings).OrderBy(a => a))
 									switch (ent)
 									{
@@ -326,14 +386,14 @@ namespace RetroConverter
 							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
 							if (actmatch.Success)
 								act = actmatch.Groups[1].Value;
-							scene.Write(Path.Combine(folderBrowserDialog1.SelectedPath, $"Act{act}.bin"));
+							scene.Write(Path.Combine(rsdkExportDialog.SelectedPath, $"Act{act}.bin"));
 						}
 						break;
 					case 1: // v4
 						{
 							Gameconfig4 gc = new Gameconfig4(gameConfig);
 							List<string> objNames = gc.ObjectsNames;
-							LevelData.LoadLevel(Levels[comboBox1.SelectedIndex], true);
+							LevelData.LoadLevel(Levels[levelSelector.SelectedIndex], true);
 							Stageconfig4 cfg = new Stageconfig4() { LoadGlobalScripts = true };
 							for (int l = 0; l < 2; l++)
 								for (int c = 0; c < 16; c++)
@@ -341,7 +401,7 @@ namespace RetroConverter
 							int ringid = objNames.IndexOf("Ring");
 							List<string> newobjs = new List<string>();
 							Dictionary<byte, byte> objMap = new Dictionary<byte, byte>();
-							if (checkBox1.Checked)
+							if (includeObjectsCheckBox.Checked)
 							{
 								if (LevelData.RingFormat is RingLayoutFormat && ringid == -1)
 								{
@@ -368,7 +428,7 @@ namespace RetroConverter
 							cfg.ObjectsNames = newobjs;
 							foreach (string name in newobjs)
 								cfg.ScriptPaths.Add(LevelData.Level.DisplayName + "\\" + name + ".txt");
-							cfg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "StageConfig.bin"));
+							cfg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgchunks = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList();
 							List<ushort> bgblocks = bgchunks.Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
 							BitmapBits blocks = new BitmapBits(16, 16384);
@@ -386,7 +446,7 @@ namespace RetroConverter
 								for (int c = 0; c < 16; c++)
 									pal[0x80 + (l * 16) + c] = LevelData.Palette[0][l, c].RGBColor;
 							using (Bitmap bmp = blocks.ToBitmap(pal))
-								bmp.Save(Path.Combine(folderBrowserDialog1.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
+								bmp.Save(Path.Combine(rsdkExportDialog.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
 							foreach (ushort c in bgchunks)
 							{
 								if (c == 0) continue;
@@ -458,14 +518,14 @@ namespace RetroConverter
 											break;
 									}
 							}
-							col.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "CollisionMasks.bin"));
+							col.Write(Path.Combine(rsdkExportDialog.SelectedPath, "CollisionMasks.bin"));
 							BGLayout4 bg = new BGLayout4();
 							bg.HLines.Add(new BGLayout4.ScrollInfo() { RelativeSpeed = 0x100 });
 							bg.Layers.Add(new BGLayout4.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight) { Behaviour = 1 });
 							for (int y = 0; y < LevelData.BGHeight; y++)
 								for (int x = 0; x < LevelData.BGWidth; x++)
 									bg.Layers[0].MapLayout[y][x] = LevelData.Layout.BGLayout[x, y];
-							bg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "Backgrounds.bin"));
+							bg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "Backgrounds.bin"));
 							Tiles128x1284 chunks = new Tiles128x1284();
 							for (int i = 0; i < tmpchnk.Count; i++)
 								if (tmpchnk[i] != null)
@@ -487,7 +547,7 @@ namespace RetroConverter
 												chunks.BlockList[i].Mapping[y][x].VisualPlane = 1;
 										}
 								}
-							chunks.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "128x128Tiles.bin"));
+							chunks.Write(Path.Combine(rsdkExportDialog.SelectedPath, "128x128Tiles.bin"));
 							Scene4 scene = new Scene4
 							{
 								Title = LevelData.Level.DisplayName,
@@ -503,7 +563,7 @@ namespace RetroConverter
 							}
 							if (LevelData.StartPositions.Count > 0)
 								scene.objects.Add(new Object4((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
-							if (checkBox1.Checked)
+							if (includeObjectsCheckBox.Checked)
 								foreach (Entry ent in LevelData.Objects.Cast<Entry>().Concat(LevelData.Rings).OrderBy(a => a))
 									switch (ent)
 									{
@@ -534,17 +594,17 @@ namespace RetroConverter
 							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
 							if (actmatch.Success)
 								act = actmatch.Groups[1].Value;
-							scene.Write(Path.Combine(folderBrowserDialog1.SelectedPath, $"Act{act}.bin"));
+							scene.Write(Path.Combine(rsdkExportDialog.SelectedPath, $"Act{act}.bin"));
 						}
 						break;
 					case 2: // v5
 						{
-							LevelData.LoadLevel(Levels[comboBox1.SelectedIndex], true);
+							LevelData.LoadLevel(Levels[levelSelector.SelectedIndex], true);
 							StageConfig5 cfg = new StageConfig5() { LoadGlobalObjects = true };
 							for (int l = 0; l < 2; l++)
 								for (int c = 0; c < 16; c++)
 									cfg.Palettes[0].Colors[l][c] = new PaletteColor5(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
-							cfg.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "StageConfig.bin"));
+							cfg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgblockids = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList().Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
 							BitmapBits blocks = new BitmapBits(16, 16384);
 							for (ushort i = 0; i < LevelData.CompBlockBmpBits.Count; i++)
@@ -561,7 +621,7 @@ namespace RetroConverter
 								for (int c = 0; c < 16; c++)
 									pal[0x80 + (l * 16) + c] = LevelData.Palette[0][l, c].RGBColor;
 							using (Bitmap bmp = blocks.ToBitmap(pal))
-								bmp.Save(Path.Combine(folderBrowserDialog1.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
+								bmp.Save(Path.Combine(rsdkExportDialog.SelectedPath, "16x16Tiles.gif"), System.Drawing.Imaging.ImageFormat.Gif);
 							MakeDualPath();
 							Tileconfig5 col = new Tileconfig5();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
@@ -611,7 +671,7 @@ namespace RetroConverter
 											break;
 									}
 							}
-							col.Write(Path.Combine(folderBrowserDialog1.SelectedPath, "TileConfig.bin"));
+							col.Write(Path.Combine(rsdkExportDialog.SelectedPath, "TileConfig.bin"));
 							int w = LevelData.Level.ChunkWidth / 16;
 							int h = LevelData.Level.ChunkHeight / 16;
 							S2ChunkBlock[,] fgblocks = new S2ChunkBlock[LevelData.FGWidth * w, LevelData.FGHeight * h];
@@ -677,7 +737,7 @@ namespace RetroConverter
 							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
 							if (actmatch.Success)
 								act = actmatch.Groups[1].Value;
-							scene.Write(Path.Combine(folderBrowserDialog1.SelectedPath, $"Scene{act}.bin"));
+							scene.Write(Path.Combine(rsdkExportDialog.SelectedPath, $"Scene{act}.bin"));
 						}
 						break;
 				}
@@ -808,5 +868,19 @@ namespace RetroConverter
 		}
 
 		readonly byte[] SolidMap = { 3, 1, 2, 0 };
+	}
+
+	public class Settings
+	{
+		[IniName("Project")]
+		[IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
+		public List<string> Projects { get; set; } = new List<string>();
+		public int RSDKVer { get; set; } = 3;
+		[IniName("GameConfig")]
+		[IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
+		public List<string> GameConfigs { get; set; } = new List<string>();
+		[IniName("TitleCard")]
+		[IniCollection(IniCollectionMode.NoSquareBrackets, StartIndex = 1)]
+		public List<string> TitleCards { get; set; } = new List<string>();
 	}
 }
