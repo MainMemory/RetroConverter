@@ -33,14 +33,14 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RSDKv2">
-      <HintPath>..\RSDKv2.dll</HintPath>
+    <Reference Include="RSDKv3">
+      <HintPath>..\RSDKv3.dll</HintPath>
+    </Reference>
+    <Reference Include="RSDKv4">
+      <HintPath>..\RSDKv4.dll</HintPath>
     </Reference>
     <Reference Include="RSDKv5">
       <HintPath>..\RSDKv5.dll</HintPath>
-    </Reference>
-    <Reference Include="RSDKvB">
-      <HintPath>..\RSDKvB.dll</HintPath>
     </Reference>
     <Reference Include="SonLVLAPI">
       <HintPath>..\SonLVLAPI.dll</HintPath>

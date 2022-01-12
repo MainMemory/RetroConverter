@@ -6,28 +6,24 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using BGLayout3 = RSDKv3.BGLayout;
-using Gameconfig3 = RSDKv3.Gameconfig;
-using Object3 = RSDKv3.Object;
-using PaletteColour3 = RSDKv3.PaletteColour;
+using BGLayout3 = RSDKv3.Backgrounds;
+using Gameconfig3 = RSDKv3.GameConfig;
+using Object3 = RSDKv3.Scene.Entity;
 using Scene3 = RSDKv3.Scene;
-using Stageconfig3 = RSDKv3.Stageconfig;
-using Tileconfig3 = RSDKv3.Tileconfig;
+using Stageconfig3 = RSDKv3.StageConfig;
+using Tileconfig3 = RSDKv3.TileConfig;
 using Tiles128x1283 = RSDKv3.Tiles128x128;
-using BGLayout4 = RSDKv4.BGLayout;
-using Gameconfig4 = RSDKv4.Gameconfig;
-using Object4 = RSDKv4.Object;
-using PaletteColour4 = RSDKv4.PaletteColour;
+using BGLayout4 = RSDKv4.Backgrounds;
+using Gameconfig4 = RSDKv4.GameConfig;
+using Object4 = RSDKv4.Scene.Entity;
 using Scene4 = RSDKv4.Scene;
-using Stageconfig4 = RSDKv4.Stageconfig;
-using Tileconfig4 = RSDKv4.Tileconfig;
+using Stageconfig4 = RSDKv4.StageConfig;
+using Tileconfig4 = RSDKv4.TileConfig;
 using Tiles128x1284 = RSDKv4.Tiles128x128;
-using PaletteColor5 = RSDKv5.PaletteColor;
 using Scene5 = RSDKv5.Scene;
 using SceneLayer5 = RSDKv5.SceneLayer;
-using ScrollInfo5 = RSDKv5.ScrollInfo;
 using StageConfig5 = RSDKv5.StageConfig;
-using Tileconfig5 = RSDKv5.Tileconfig;
+using Tileconfig5 = RSDKv5.TileConfig;
 
 namespace RetroConverter
 {
@@ -173,19 +169,16 @@ namespace RetroConverter
 					case 0: // v3
 						{
 							Gameconfig3 gc = new Gameconfig3(gameConfig);
-							List<string> objNames = gc.ObjectsNames;
+							List<string> objNames = gc.objects.Select(a => a.name).ToList();
 							LevelData.LoadLevel(Levels[levelSelector.SelectedIndex], true);
-							Stageconfig3 cfg = new Stageconfig3() { LoadGlobalScripts = true };
-							for (int l = 0; l < 2; l++)
-								for (int c = 0; c < 16; c++)
-									cfg.StagePalette.Colors[l][c] = new PaletteColour3(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
+							Stageconfig3 cfg = new Stageconfig3() { loadGlobalObjects = true };
 							if (!string.IsNullOrWhiteSpace(titleCardScriptBox.Text))
 							{
 								settings.TitleCards.Remove(titleCardScriptBox.Text);
 								settings.TitleCards.Insert(0, titleCardScriptBox.Text);
 								titleCardScriptBox.AutoCompleteCustomSource.AddRange(settings.TitleCards.ToArray());
 								objNames.Add(Path.GetFileNameWithoutExtension(titleCardScriptBox.Text));
-								cfg.ScriptPaths.Add(titleCardScriptBox.Text);
+								cfg.objects.Add(new Gameconfig3.ObjectInfo() { name = Path.GetFileNameWithoutExtension(titleCardScriptBox.Text), script = titleCardScriptBox.Text });
 							}
 							int ringid = objNames.IndexOf("Ring");
 							List<string> newobjs = new List<string>();
@@ -214,12 +207,9 @@ namespace RetroConverter
 									objMap[id] = (byte)newid;
 								}
 							}
-							cfg.ObjectsNames = newobjs;
 							foreach (string name in newobjs)
-								cfg.ScriptPaths.Add(LevelData.Level.DisplayName + "\\" + name + ".txt");
-							if (!string.IsNullOrWhiteSpace(titleCardScriptBox.Text))
-								newobjs.Insert(0, Path.GetFileNameWithoutExtension(titleCardScriptBox.Text));
-							cfg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
+								cfg.objects.Add(new Gameconfig3.ObjectInfo() { name = name, script = LevelData.Level.DisplayName + "\\" + name + ".txt" });
+							cfg.write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgchunks = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList();
 							List<ushort> bgblocks = bgchunks.Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
 							BitmapBits blocks = new BitmapBits(16, 16384);
@@ -264,59 +254,59 @@ namespace RetroConverter
 							Tileconfig3 col = new Tileconfig3();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
 							{
-								col.CollisionPath1[i].isCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
-								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
-								if (col.CollisionPath1[i].FloorAngle == 0xFF)
-									col.CollisionPath1[i].FloorAngle = 0;
-								col.CollisionPath1[i].LWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x40);
-								col.CollisionPath1[i].CeilingAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x80);
-								col.CollisionPath1[i].RWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0xC0);
+								col.collisionMasks[0][i].flipY = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
+								col.collisionMasks[0][i].floorAngle = LevelData.Angles[LevelData.ColInds1[i]];
+								if (col.collisionMasks[0][i].floorAngle == 0xFF)
+									col.collisionMasks[0][i].floorAngle = 0;
+								col.collisionMasks[0][i].lWallAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0x40);
+								col.collisionMasks[0][i].roofAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0x80);
+								col.collisionMasks[0][i].rWallAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0xC0);
 								for (int j = 0; j < 16; j++)
 									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds1[i]][j]))
 									{
 										case 1:
-											col.CollisionPath1[i].HasCollision[j] = true;
-											if (col.CollisionPath1[i].isCeiling && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
-												col.CollisionPath1[i].Collision[j] = 15;
+											col.collisionMasks[0][i].heightMasks[j].solid = true;
+											if (col.collisionMasks[0][i].flipY && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
+												col.collisionMasks[0][i].heightMasks[j].height = 15;
 											else
-												col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+												col.collisionMasks[0][i].heightMasks[j].height = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 										case -1:
-											col.CollisionPath1[i].HasCollision[j] = true;
-											col.CollisionPath1[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											col.collisionMasks[0][i].heightMasks[j].solid = true;
+											col.collisionMasks[0][i].heightMasks[j].height = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 									}
-								col.CollisionPath2[i].FloorAngle = LevelData.Angles[LevelData.ColInds2[i]];
-								col.CollisionPath2[i].isCeiling = LevelData.ColArr1[LevelData.ColInds2[i]].Sum(a => Math.Sign(a)) < 0;
-								if (col.CollisionPath2[i].FloorAngle == 0xFF)
-									col.CollisionPath2[i].FloorAngle = 0;
-								col.CollisionPath2[i].LWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x40);
-								col.CollisionPath2[i].CeilingAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x80);
-								col.CollisionPath2[i].RWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0xC0);
+								col.collisionMasks[1][i].flipY = LevelData.ColArr1[LevelData.ColInds2[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
+								col.collisionMasks[1][i].floorAngle = LevelData.Angles[LevelData.ColInds2[i]];
+								if (col.collisionMasks[1][i].floorAngle == 0xFF)
+									col.collisionMasks[1][i].floorAngle = 0;
+								col.collisionMasks[1][i].lWallAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0x40);
+								col.collisionMasks[1][i].roofAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0x80);
+								col.collisionMasks[1][i].rWallAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0xC0);
 								for (int j = 0; j < 16; j++)
 									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds2[i]][j]))
 									{
 										case 1:
-											col.CollisionPath2[i].HasCollision[j] = true;
-											if (col.CollisionPath2[i].isCeiling && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
-												col.CollisionPath2[i].Collision[j] = 15;
+											col.collisionMasks[1][i].heightMasks[j].solid = true;
+											if (col.collisionMasks[1][i].flipY && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
+												col.collisionMasks[1][i].heightMasks[j].height = 15;
 											else
-												col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+												col.collisionMasks[1][i].heightMasks[j].height = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 										case -1:
-											col.CollisionPath2[i].HasCollision[j] = true;
-											col.CollisionPath2[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											col.collisionMasks[1][i].heightMasks[j].solid = true;
+											col.collisionMasks[1][i].heightMasks[j].height = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 									}
 							}
-							col.Write(Path.Combine(rsdkExportDialog.SelectedPath, "CollisionMasks.bin"));
+							col.write(Path.Combine(rsdkExportDialog.SelectedPath, "CollisionMasks.bin"));
 							BGLayout3 bg = new BGLayout3();
-							bg.HLines.Add(new BGLayout3.ScrollInfo() { RelativeSpeed = 0x100 });
-							bg.Layers.Add(new BGLayout3.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight) { Behaviour = 1 });
+							bg.hScroll.Add(new BGLayout3.ScrollInfo());
+							bg.layers[0].resize((byte)LevelData.BGWidth, (byte)LevelData.BGHeight);
 							for (int y = 0; y < LevelData.BGHeight; y++)
 								for (int x = 0; x < LevelData.BGWidth; x++)
-									bg.Layers[0].MapLayout[y][x] = LevelData.Layout.BGLayout[x, y];
-							bg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "Backgrounds.bin"));
+									bg.layers[0].layout[y][x] = LevelData.Layout.BGLayout[x, y];
+							bg.write(Path.Combine(rsdkExportDialog.SelectedPath, "Backgrounds.bin"));
 							Tiles128x1283 chunks = new Tiles128x1283();
 							for (int i = 0; i < tmpchnk.Count; i++)
 								if (tmpchnk[i] != null)
@@ -324,49 +314,49 @@ namespace RetroConverter
 									for (int y = 0; y < 8; y++)
 										for (int x = 0; x < 8; x++)
 										{
-											chunks.BlockList[i].Mapping[y][x].Tile16x16 = tmpchnk[i].Blocks[x, y].Block;
+											chunks.chunkList[i].tiles[y][x].tileIndex = tmpchnk[i].Blocks[x, y].Block;
 											if (tmpchnk[i].Blocks[x, y].XFlip && tmpchnk[i].Blocks[x, y].YFlip)
-												chunks.BlockList[i].Mapping[y][x].FlipType = Tiles128x1283.Tile128.Tile16.FlipTypes.FLIPXY;
+												chunks.chunkList[i].tiles[y][x].direction = Tiles128x1283.Block.Tile.Directions.FlipXY;
 											else if (tmpchnk[i].Blocks[x, y].YFlip)
-												chunks.BlockList[i].Mapping[y][x].FlipType = Tiles128x1283.Tile128.Tile16.FlipTypes.FLIPY;
+												chunks.chunkList[i].tiles[y][x].direction = Tiles128x1283.Block.Tile.Directions.FlipY;
 											else if (tmpchnk[i].Blocks[x, y].XFlip)
-												chunks.BlockList[i].Mapping[y][x].FlipType = Tiles128x1283.Tile128.Tile16.FlipTypes.FLIPX;
-											chunks.BlockList[i].Mapping[y][x].CollisionFlag0 = SolidMap[(byte)tmpchnk[i].Blocks[x, y].Solid1];
-											chunks.BlockList[i].Mapping[y][x].CollisionFlag1 = SolidMap[(byte)((S2ChunkBlock)tmpchnk[i].Blocks[x, y]).Solid2];
+												chunks.chunkList[i].tiles[y][x].direction = Tiles128x1283.Block.Tile.Directions.FlipX;
+											chunks.chunkList[i].tiles[y][x].solidityA = (Tiles128x1283.Block.Tile.Solidities)SolidMap[(byte)tmpchnk[i].Blocks[x, y].Solid1];
+											chunks.chunkList[i].tiles[y][x].solidityB = (Tiles128x1283.Block.Tile.Solidities)SolidMap[(byte)((S2ChunkBlock)tmpchnk[i].Blocks[x, y]).Solid2];
 											Block blk = LevelData.Blocks[tmpchnk[i].Blocks[x, y].Block];
 											if (blk != null && blk.Tiles.OfType<PatternIndex>().Count(a => a.Priority) > 1)
-												chunks.BlockList[i].Mapping[y][x].VisualPlane = 1;
+												chunks.chunkList[i].tiles[y][x].visualPlane = Tiles128x1283.Block.Tile.VisualPlanes.High;
 										}
 								}
-							chunks.Write(Path.Combine(rsdkExportDialog.SelectedPath, "128x128Tiles.bin"));
+							chunks.write(Path.Combine(rsdkExportDialog.SelectedPath, "128x128Tiles.bin"));
 							Scene3 scene = new Scene3
 							{
-								Title = LevelData.Level.DisplayName,
-								width = (ushort)LevelData.FGWidth,
-								height = (ushort)LevelData.FGHeight,
-								MapLayout = new ushort[LevelData.FGHeight][]
+								title = LevelData.Level.DisplayName,
+								width = (byte)LevelData.FGWidth,
+								height = (byte)LevelData.FGHeight,
+								layout = new ushort[LevelData.FGHeight][]
 							};
 							for (int y = 0; y < LevelData.FGHeight; y++)
 							{
-								scene.MapLayout[y] = new ushort[LevelData.FGWidth];
+								scene.layout[y] = new ushort[LevelData.FGWidth];
 								for (int x = 0; x < LevelData.FGWidth; x++)
-									scene.MapLayout[y][x] = LevelData.Layout.FGLayout[x, y];
+									scene.layout[y][x] = LevelData.Layout.FGLayout[x, y];
 							}
 							scene.objectTypeNames = objNames;
 							if (LevelData.StartPositions.Count > 0)
-								scene.objects.Add(new Object3((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
+								scene.entities.Add(new Object3((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
 							if (includeObjectsCheckBox.Checked)
 								foreach (Entry ent in LevelData.Objects.Cast<Entry>().Concat(LevelData.Rings).OrderBy(a => a))
 									switch (ent)
 									{
 										case ObjectEntry obj:
-											scene.objects.Add(new Object3(objMap[obj.ID], obj.SubType, (short)obj.X, (short)obj.Y));
+											scene.entities.Add(new Object3(objMap[obj.ID], obj.SubType, (short)obj.X, (short)obj.Y));
 											break;
 										case SonicRetro.SonLVL.API.S2.S2RingEntry rng2:
 											Point rpos = new Point(rng2.X, rng2.Y);
 											for (int r = 0; r < rng2.Count; r++)
 											{
-												scene.objects.Add(new Object3((byte)ringid, 0, (short)rpos.X, (short)rpos.Y));
+												scene.entities.Add(new Object3((byte)ringid, 0, (short)rpos.X, (short)rpos.Y));
 												switch (rng2.Direction)
 												{
 													case Direction.Horizontal:
@@ -379,25 +369,22 @@ namespace RetroConverter
 											}
 											break;
 										case RingEntry rng:
-											scene.objects.Add(new Object3((byte)ringid, 0, (short)rng.X, (short)rng.Y));
+											scene.entities.Add(new Object3((byte)ringid, 0, (short)rng.X, (short)rng.Y));
 											break;
 									}
 							string act = "1";
 							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
 							if (actmatch.Success)
 								act = actmatch.Groups[1].Value;
-							scene.Write(Path.Combine(rsdkExportDialog.SelectedPath, $"Act{act}.bin"));
+							scene.write(Path.Combine(rsdkExportDialog.SelectedPath, $"Act{act}.bin"));
 						}
 						break;
 					case 1: // v4
 						{
 							Gameconfig4 gc = new Gameconfig4(gameConfig);
-							List<string> objNames = gc.ObjectsNames;
+							List<string> objNames = gc.objects.Select(a => a.name).ToList();
 							LevelData.LoadLevel(Levels[levelSelector.SelectedIndex], true);
-							Stageconfig4 cfg = new Stageconfig4() { LoadGlobalScripts = true };
-							for (int l = 0; l < 2; l++)
-								for (int c = 0; c < 16; c++)
-									cfg.StagePalette.Colors[l][c] = new PaletteColour4(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
+							Stageconfig4 cfg = new Stageconfig4() { loadGlobalObjects = true };
 							int ringid = objNames.IndexOf("Ring");
 							List<string> newobjs = new List<string>();
 							Dictionary<byte, byte> objMap = new Dictionary<byte, byte>();
@@ -425,10 +412,9 @@ namespace RetroConverter
 									objMap[id] = (byte)newid;
 								}
 							}
-							cfg.ObjectsNames = newobjs;
 							foreach (string name in newobjs)
-								cfg.ScriptPaths.Add(LevelData.Level.DisplayName + "\\" + name + ".txt");
-							cfg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
+								cfg.objects.Add(new Gameconfig4.ObjectInfo() { name = name, script = LevelData.Level.DisplayName + "\\" + name + ".txt" });
+							cfg.write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgchunks = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList();
 							List<ushort> bgblocks = bgchunks.Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
 							BitmapBits blocks = new BitmapBits(16, 16384);
@@ -473,59 +459,59 @@ namespace RetroConverter
 							Tileconfig4 col = new Tileconfig4();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
 							{
-								col.CollisionPath1[i].isCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
-								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
-								if (col.CollisionPath1[i].FloorAngle == 0xFF)
-									col.CollisionPath1[i].FloorAngle = 0;
-								col.CollisionPath1[i].LWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x40);
-								col.CollisionPath1[i].CeilingAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x80);
-								col.CollisionPath1[i].RWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0xC0);
+								col.collisionMasks[0][i].flipY = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
+								col.collisionMasks[0][i].floorAngle = LevelData.Angles[LevelData.ColInds1[i]];
+								if (col.collisionMasks[0][i].floorAngle == 0xFF)
+									col.collisionMasks[0][i].floorAngle = 0;
+								col.collisionMasks[0][i].lWallAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0x40);
+								col.collisionMasks[0][i].roofAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0x80);
+								col.collisionMasks[0][i].rWallAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0xC0);
 								for (int j = 0; j < 16; j++)
 									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds1[i]][j]))
 									{
 										case 1:
-											col.CollisionPath1[i].HasCollision[j] = true;
-											if (col.CollisionPath1[i].isCeiling && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
-												col.CollisionPath1[i].Collision[j] = 15;
+											col.collisionMasks[0][i].heightMasks[j].solid = true;
+											if (col.collisionMasks[0][i].flipY && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
+												col.collisionMasks[0][i].heightMasks[j].height = 15;
 											else
-												col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+												col.collisionMasks[0][i].heightMasks[j].height = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 										case -1:
-											col.CollisionPath1[i].HasCollision[j] = true;
-											col.CollisionPath1[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											col.collisionMasks[0][i].heightMasks[j].solid = true;
+											col.collisionMasks[0][i].heightMasks[j].height = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 									}
-								col.CollisionPath2[i].FloorAngle = LevelData.Angles[LevelData.ColInds2[i]];
-								col.CollisionPath2[i].isCeiling = LevelData.ColArr1[LevelData.ColInds2[i]].Sum(a => Math.Sign(a)) < 0;
-								if (col.CollisionPath2[i].FloorAngle == 0xFF)
-									col.CollisionPath2[i].FloorAngle = 0;
-								col.CollisionPath2[i].LWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x40);
-								col.CollisionPath2[i].CeilingAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x80);
-								col.CollisionPath2[i].RWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0xC0);
+								col.collisionMasks[1][i].flipY = LevelData.ColArr1[LevelData.ColInds2[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
+								col.collisionMasks[1][i].floorAngle = LevelData.Angles[LevelData.ColInds2[i]];
+								if (col.collisionMasks[1][i].floorAngle == 0xFF)
+									col.collisionMasks[1][i].floorAngle = 0;
+								col.collisionMasks[1][i].lWallAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0x40);
+								col.collisionMasks[1][i].roofAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0x80);
+								col.collisionMasks[1][i].rWallAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0xC0);
 								for (int j = 0; j < 16; j++)
 									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds2[i]][j]))
 									{
 										case 1:
-											col.CollisionPath2[i].HasCollision[j] = true;
-											if (col.CollisionPath2[i].isCeiling && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
-												col.CollisionPath2[i].Collision[j] = 15;
+											col.collisionMasks[1][i].heightMasks[j].solid = true;
+											if (col.collisionMasks[1][i].flipY && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
+												col.collisionMasks[1][i].heightMasks[j].height = 15;
 											else
-												col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+												col.collisionMasks[1][i].heightMasks[j].height = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 										case -1:
-											col.CollisionPath2[i].HasCollision[j] = true;
-											col.CollisionPath2[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											col.collisionMasks[1][i].heightMasks[j].solid = true;
+											col.collisionMasks[1][i].heightMasks[j].height = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 									}
 							}
-							col.Write(Path.Combine(rsdkExportDialog.SelectedPath, "CollisionMasks.bin"));
+							col.write(Path.Combine(rsdkExportDialog.SelectedPath, "CollisionMasks.bin"));
 							BGLayout4 bg = new BGLayout4();
-							bg.HLines.Add(new BGLayout4.ScrollInfo() { RelativeSpeed = 0x100 });
-							bg.Layers.Add(new BGLayout4.BGLayer((byte)LevelData.BGWidth, (byte)LevelData.BGHeight) { Behaviour = 1 });
+							bg.hScroll.Add(new BGLayout4.ScrollInfo());
+							bg.layers[0].resize((byte)LevelData.BGWidth, (byte)LevelData.BGHeight);
 							for (int y = 0; y < LevelData.BGHeight; y++)
 								for (int x = 0; x < LevelData.BGWidth; x++)
-									bg.Layers[0].MapLayout[y][x] = LevelData.Layout.BGLayout[x, y];
-							bg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "Backgrounds.bin"));
+									bg.layers[0].layout[y][x] = LevelData.Layout.BGLayout[x, y];
+							bg.write(Path.Combine(rsdkExportDialog.SelectedPath, "Backgrounds.bin"));
 							Tiles128x1284 chunks = new Tiles128x1284();
 							for (int i = 0; i < tmpchnk.Count; i++)
 								if (tmpchnk[i] != null)
@@ -533,48 +519,48 @@ namespace RetroConverter
 									for (int y = 0; y < 8; y++)
 										for (int x = 0; x < 8; x++)
 										{
-											chunks.BlockList[i].Mapping[y][x].Tile16x16 = tmpchnk[i].Blocks[x, y].Block;
+											chunks.chunkList[i].tiles[y][x].tileIndex = tmpchnk[i].Blocks[x, y].Block;
 											if (tmpchnk[i].Blocks[x, y].XFlip && tmpchnk[i].Blocks[x, y].YFlip)
-												chunks.BlockList[i].Mapping[y][x].Direction = 3;
+												chunks.chunkList[i].tiles[y][x].direction = Tiles128x1284.Block.Tile.Directions.FlipXY;
 											else if (tmpchnk[i].Blocks[x, y].YFlip)
-												chunks.BlockList[i].Mapping[y][x].Direction = 2;
+												chunks.chunkList[i].tiles[y][x].direction = Tiles128x1284.Block.Tile.Directions.FlipY;
 											else if (tmpchnk[i].Blocks[x, y].XFlip)
-												chunks.BlockList[i].Mapping[y][x].Direction = 1;
-											chunks.BlockList[i].Mapping[y][x].CollisionFlag0 = SolidMap[(byte)tmpchnk[i].Blocks[x, y].Solid1];
-											chunks.BlockList[i].Mapping[y][x].CollisionFlag1 = SolidMap[(byte)((S2ChunkBlock)tmpchnk[i].Blocks[x, y]).Solid2];
+												chunks.chunkList[i].tiles[y][x].direction = Tiles128x1284.Block.Tile.Directions.FlipX;
+											chunks.chunkList[i].tiles[y][x].solidityA = (Tiles128x1284.Block.Tile.Solidities)SolidMap[(byte)tmpchnk[i].Blocks[x, y].Solid1];
+											chunks.chunkList[i].tiles[y][x].solidityB = (Tiles128x1284.Block.Tile.Solidities)SolidMap[(byte)((S2ChunkBlock)tmpchnk[i].Blocks[x, y]).Solid2];
 											Block blk = LevelData.Blocks[tmpchnk[i].Blocks[x, y].Block];
 											if (blk != null && blk.Tiles.OfType<PatternIndex>().Count(a => a.Priority) > 1)
-												chunks.BlockList[i].Mapping[y][x].VisualPlane = 1;
+												chunks.chunkList[i].tiles[y][x].visualPlane = Tiles128x1284.Block.Tile.VisualPlanes.High;
 										}
 								}
-							chunks.Write(Path.Combine(rsdkExportDialog.SelectedPath, "128x128Tiles.bin"));
+							chunks.write(Path.Combine(rsdkExportDialog.SelectedPath, "128x128Tiles.bin"));
 							Scene4 scene = new Scene4
 							{
-								Title = LevelData.Level.DisplayName,
-								width = (ushort)LevelData.FGWidth,
-								height = (ushort)LevelData.FGHeight,
-								MapLayout = new ushort[LevelData.FGHeight][]
+								title = LevelData.Level.DisplayName,
+								width = (byte)LevelData.FGWidth,
+								height = (byte)LevelData.FGHeight,
+								layout = new ushort[LevelData.FGHeight][]
 							};
 							for (int y = 0; y < LevelData.FGHeight; y++)
 							{
-								scene.MapLayout[y] = new ushort[LevelData.FGWidth];
+								scene.layout[y] = new ushort[LevelData.FGWidth];
 								for (int x = 0; x < LevelData.FGWidth; x++)
-									scene.MapLayout[y][x] = LevelData.Layout.FGLayout[x, y];
+									scene.layout[y][x] = LevelData.Layout.FGLayout[x, y];
 							}
 							if (LevelData.StartPositions.Count > 0)
-								scene.objects.Add(new Object4((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
+								scene.entities.Add(new Object4((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
 							if (includeObjectsCheckBox.Checked)
 								foreach (Entry ent in LevelData.Objects.Cast<Entry>().Concat(LevelData.Rings).OrderBy(a => a))
 									switch (ent)
 									{
 										case ObjectEntry obj:
-											scene.objects.Add(new Object4(objMap[obj.ID], obj.SubType, (short)obj.X, (short)obj.Y));
+											scene.entities.Add(new Object4(objMap[obj.ID], obj.SubType, (short)obj.X, (short)obj.Y));
 											break;
 										case SonicRetro.SonLVL.API.S2.S2RingEntry rng2:
 											Point rpos = new Point(rng2.X, rng2.Y);
 											for (int r = 0; r < rng2.Count; r++)
 											{
-												scene.objects.Add(new Object4((byte)ringid, 0, (short)rpos.X, (short)rpos.Y));
+												scene.entities.Add(new Object4((byte)ringid, 0, (short)rpos.X, (short)rpos.Y));
 												switch (rng2.Direction)
 												{
 													case Direction.Horizontal:
@@ -587,24 +573,21 @@ namespace RetroConverter
 											}
 											break;
 										case RingEntry rng:
-											scene.objects.Add(new Object4((byte)ringid, 0, (short)rng.X, (short)rng.Y));
+											scene.entities.Add(new Object4((byte)ringid, 0, (short)rng.X, (short)rng.Y));
 											break;
 									}
 							string act = "1";
 							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
 							if (actmatch.Success)
 								act = actmatch.Groups[1].Value;
-							scene.Write(Path.Combine(rsdkExportDialog.SelectedPath, $"Act{act}.bin"));
+							scene.write(Path.Combine(rsdkExportDialog.SelectedPath, $"Act{act}.bin"));
 						}
 						break;
 					case 2: // v5
 						{
 							LevelData.LoadLevel(Levels[levelSelector.SelectedIndex], true);
-							StageConfig5 cfg = new StageConfig5() { LoadGlobalObjects = true };
-							for (int l = 0; l < 2; l++)
-								for (int c = 0; c < 16; c++)
-									cfg.Palettes[0].Colors[l][c] = new PaletteColor5(LevelData.Palette[0][l + 2, c].R, LevelData.Palette[0][l + 2, c].G, LevelData.Palette[0][l + 2, c].B);
-							cfg.Write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
+							StageConfig5 cfg = new StageConfig5() { loadGlobalObjects = true };
+							cfg.write(Path.Combine(rsdkExportDialog.SelectedPath, "StageConfig.bin"));
 							List<ushort> bgblockids = LevelData.Layout.BGLayout.OfType<ushort>().Distinct().ToList().Select(a => LevelData.Chunks[a]).Where(b => b != null).SelectMany(c => c.Blocks.OfType<ChunkBlock>().Select(d => d.Block)).Distinct().ToList();
 							BitmapBits blocks = new BitmapBits(16, 16384);
 							for (ushort i = 0; i < LevelData.CompBlockBmpBits.Count; i++)
@@ -626,52 +609,52 @@ namespace RetroConverter
 							Tileconfig5 col = new Tileconfig5();
 							for (int i = 0; i < LevelData.ColInds1.Count; i++)
 							{
-								col.CollisionPath1[i].IsCeiling = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
-								col.CollisionPath1[i].FloorAngle = LevelData.Angles[LevelData.ColInds1[i]];
-								if (col.CollisionPath1[i].FloorAngle == 0xFF)
-									col.CollisionPath1[i].FloorAngle = 0;
-								col.CollisionPath1[i].LWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x40);
-								col.CollisionPath1[i].CeilingAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0x80);
-								col.CollisionPath1[i].RWallAngle = (byte)(col.CollisionPath1[i].FloorAngle + 0xC0);
+								col.collisionMasks[0][i].flipY = LevelData.ColArr1[LevelData.ColInds1[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
+								col.collisionMasks[0][i].floorAngle = LevelData.Angles[LevelData.ColInds1[i]];
+								if (col.collisionMasks[0][i].floorAngle == 0xFF)
+									col.collisionMasks[0][i].floorAngle = 0;
+								col.collisionMasks[0][i].lWallAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0x40);
+								col.collisionMasks[0][i].roofAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0x80);
+								col.collisionMasks[0][i].rWallAngle = (byte)(col.collisionMasks[0][i].floorAngle + 0xC0);
 								for (int j = 0; j < 16; j++)
 									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds1[i]][j]))
 									{
 										case 1:
-											col.CollisionPath1[i].HasCollision[j] = true;
-											if (col.CollisionPath1[i].IsCeiling && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
-												col.CollisionPath1[i].Collision[j] = 15;
+											col.collisionMasks[0][i].heightMasks[j].solid = true;
+											if (col.collisionMasks[0][i].flipY && LevelData.ColArr1[LevelData.ColInds1[i]][j] == 16)
+												col.collisionMasks[0][i].heightMasks[j].height = 15;
 											else
-												col.CollisionPath1[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+												col.collisionMasks[0][i].heightMasks[j].height = (byte)(16 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 										case -1:
-											col.CollisionPath1[i].HasCollision[j] = true;
-											col.CollisionPath1[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
+											col.collisionMasks[0][i].heightMasks[j].solid = true;
+											col.collisionMasks[0][i].heightMasks[j].height = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds1[i]][j]);
 											break;
 									}
-								col.CollisionPath2[i].FloorAngle = LevelData.Angles[LevelData.ColInds2[i]];
-								col.CollisionPath2[i].IsCeiling = LevelData.ColArr1[LevelData.ColInds2[i]].Sum(a => Math.Sign(a)) < 0;
-								if (col.CollisionPath2[i].FloorAngle == 0xFF)
-									col.CollisionPath2[i].FloorAngle = 0;
-								col.CollisionPath2[i].LWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x40);
-								col.CollisionPath2[i].CeilingAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0x80);
-								col.CollisionPath2[i].RWallAngle = (byte)(col.CollisionPath2[i].FloorAngle + 0xC0);
+								col.collisionMasks[1][i].flipY = LevelData.ColArr1[LevelData.ColInds2[i]].Where(a => a != 16).Sum(a => Math.Sign(a)) < 0;
+								col.collisionMasks[1][i].floorAngle = LevelData.Angles[LevelData.ColInds2[i]];
+								if (col.collisionMasks[1][i].floorAngle == 0xFF)
+									col.collisionMasks[1][i].floorAngle = 0;
+								col.collisionMasks[1][i].lWallAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0x40);
+								col.collisionMasks[1][i].roofAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0x80);
+								col.collisionMasks[1][i].rWallAngle = (byte)(col.collisionMasks[1][i].floorAngle + 0xC0);
 								for (int j = 0; j < 16; j++)
 									switch (Math.Sign(LevelData.ColArr1[LevelData.ColInds2[i]][j]))
 									{
 										case 1:
-											col.CollisionPath2[i].HasCollision[j] = true;
-											if (col.CollisionPath2[i].IsCeiling && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
-												col.CollisionPath2[i].Collision[j] = 15;
+											col.collisionMasks[1][i].heightMasks[j].solid = true;
+											if (col.collisionMasks[1][i].flipY && LevelData.ColArr1[LevelData.ColInds2[i]][j] == 16)
+												col.collisionMasks[1][i].heightMasks[j].height = 15;
 											else
-												col.CollisionPath2[i].Collision[j] = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+												col.collisionMasks[1][i].heightMasks[j].height = (byte)(16 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 										case -1:
-											col.CollisionPath2[i].HasCollision[j] = true;
-											col.CollisionPath2[i].Collision[j] = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
+											col.collisionMasks[1][i].heightMasks[j].solid = true;
+											col.collisionMasks[1][i].heightMasks[j].height = (byte)(-1 - LevelData.ColArr1[LevelData.ColInds2[i]][j]);
 											break;
 									}
 							}
-							col.Write(Path.Combine(rsdkExportDialog.SelectedPath, "TileConfig.bin"));
+							col.write(Path.Combine(rsdkExportDialog.SelectedPath, "TileConfig.bin"));
 							int w = LevelData.Level.ChunkWidth / 16;
 							int h = LevelData.Level.ChunkHeight / 16;
 							S2ChunkBlock[,] fgblocks = new S2ChunkBlock[LevelData.FGWidth * w, LevelData.FGHeight * h];
@@ -700,44 +683,35 @@ namespace RetroConverter
 								}
 							Scene5 scene = new Scene5();
 							SceneLayer5 layer = new SceneLayer5("Background", (ushort)(LevelData.BGWidth * w), (ushort)(LevelData.BGHeight * h));
-							layer.Behaviour = 1;
-							layer.RelativeSpeed = 256;
-							layer.ScrollingInfo.Add(new ScrollInfo5());
 							for (int y = 0; y < LevelData.BGHeight * h; y++)
 								for (int x = 0; x < LevelData.BGWidth * w; x++)
-									layer.Tiles[y][x] = ByteConverter.ToUInt16(bgblocks[x, y].GetBytes(), 0);
-							scene.Layers.Add(layer);
+									layer.layout[y][x] = ByteConverter.ToUInt16(bgblocks[x, y].GetBytes(), 0);
+							scene.layers.Add(layer);
 							layer = new SceneLayer5("FG Low", (ushort)(LevelData.FGWidth * w), (ushort)(LevelData.FGHeight * h));
-							layer.Behaviour = 1;
-							layer.RelativeSpeed = 256;
-							layer.DrawingOrder = 1;
-							layer.ScrollingInfo.Add(new ScrollInfo5());
+							layer.drawOrder = 1;
 							for (int y = 0; y < LevelData.FGHeight * h; y++)
 								for (int x = 0; x < LevelData.FGWidth * w; x++)
 								{
 									Block blk = LevelData.Blocks[fgblocks[x, y].Block];
 									if (blk != null && blk.Tiles.OfType<PatternIndex>().Count(a => a.Priority) < 2)
-										layer.Tiles[y][x] = ByteConverter.ToUInt16(fgblocks[x, y].GetBytes(), 0);
+										layer.layout[y][x] = ByteConverter.ToUInt16(fgblocks[x, y].GetBytes(), 0);
 								}
-							scene.Layers.Add(layer);
+							scene.layers.Add(layer);
 							layer = new SceneLayer5("FG High", (ushort)(LevelData.FGWidth * w), (ushort)(LevelData.FGHeight * h));
-							layer.Behaviour = 1;
-							layer.RelativeSpeed = 256;
-							layer.DrawingOrder = 2;
-							layer.ScrollingInfo.Add(new ScrollInfo5());
+							layer.drawOrder = 2;
 							for (int y = 0; y < LevelData.FGHeight * h; y++)
 								for (int x = 0; x < LevelData.FGWidth * w; x++)
 								{
 									Block blk = LevelData.Blocks[fgblocks[x, y].Block];
 									if (blk != null && blk.Tiles.OfType<PatternIndex>().Count(a => a.Priority) > 1)
-										layer.Tiles[y][x] = ByteConverter.ToUInt16(fgblocks[x, y].GetBytes(), 0);
+										layer.layout[y][x] = ByteConverter.ToUInt16(fgblocks[x, y].GetBytes(), 0);
 								}
-							scene.Layers.Add(layer);
+							scene.layers.Add(layer);
 							string act = "1";
 							Match actmatch = actregex.Match(LevelData.Level.DisplayName);
 							if (actmatch.Success)
 								act = actmatch.Groups[1].Value;
-							scene.Write(Path.Combine(rsdkExportDialog.SelectedPath, $"Scene{act}.bin"));
+							scene.write(Path.Combine(rsdkExportDialog.SelectedPath, $"Scene{act}.bin"));
 						}
 						break;
 				}
