@@ -643,13 +643,13 @@ namespace RetroConverter
 					switch (ent)
 					{
 						case ObjectEntry obj:
-							scene.entities.Add(new Object4(objMap[obj.ID], obj.SubType, (short)obj.X, (short)obj.Y));
+							scene.entities.Add(new Object4(objMap[obj.ID], obj.SubType, (short)(obj.X << 16), (short)(obj.Y << 16)));
 							break;
 						case SonicRetro.SonLVL.API.S2.S2RingEntry rng2:
 							Point rpos = new Point(rng2.X, rng2.Y);
 							for (int r = 0; r < rng2.Count; r++)
 							{
-								scene.entities.Add(new Object4((byte)ringid, 0, (short)rpos.X, (short)rpos.Y));
+								scene.entities.Add(new Object4((byte)ringid, 0, (short)(rpos.X << 16), (short)(rpos.Y << 16)));
 								switch (rng2.Direction)
 								{
 									case Direction.Horizontal:
@@ -662,7 +662,7 @@ namespace RetroConverter
 							}
 							break;
 						case RingEntry rng:
-							scene.entities.Add(new Object4((byte)ringid, 0, (short)rng.X, (short)rng.Y));
+							scene.entities.Add(new Object4((byte)ringid, 0, (short)(rng.X << 16), (short)(rng.Y << 16)));
 							break;
 					}
 			string act = "1";
