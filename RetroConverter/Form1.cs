@@ -637,19 +637,19 @@ namespace RetroConverter
 				for (int x = 0; x < LevelData.FGWidth; x++)
 					scene.layout[y][x] = LevelData.Layout.FGLayout[x, y];
 			if (LevelData.StartPositions.Count > 0)
-				scene.entities.Add(new Object4((byte)(objNames.IndexOf("Player Object") + 1), 0, (short)LevelData.StartPositions[0].X, (short)LevelData.StartPositions[0].Y));
+				scene.entities.Add(new Object4((byte)(objNames.IndexOf("Player Object") + 1), 0, LevelData.StartPositions[0].X << 16, LevelData.StartPositions[0].Y << 16));
 			if (includeObjectsCheckBox.Checked)
 				foreach (Entry ent in LevelData.Objects.Cast<Entry>().Concat(LevelData.Rings).OrderBy(a => a))
 					switch (ent)
 					{
 						case ObjectEntry obj:
-							scene.entities.Add(new Object4(objMap[obj.ID], obj.SubType, (short)(obj.X << 16), (short)(obj.Y << 16)));
+							scene.entities.Add(new Object4(objMap[obj.ID], obj.SubType, obj.X << 16, obj.Y << 16));
 							break;
 						case SonicRetro.SonLVL.API.S2.S2RingEntry rng2:
 							Point rpos = new Point(rng2.X, rng2.Y);
 							for (int r = 0; r < rng2.Count; r++)
 							{
-								scene.entities.Add(new Object4((byte)ringid, 0, (short)(rpos.X << 16), (short)(rpos.Y << 16)));
+								scene.entities.Add(new Object4((byte)ringid, 0, rpos.X << 16, rpos.Y << 16));
 								switch (rng2.Direction)
 								{
 									case Direction.Horizontal:
@@ -662,7 +662,7 @@ namespace RetroConverter
 							}
 							break;
 						case RingEntry rng:
-							scene.entities.Add(new Object4((byte)ringid, 0, (short)(rng.X << 16), (short)(rng.Y << 16)));
+							scene.entities.Add(new Object4((byte)ringid, 0, rng.X << 16, rng.Y << 16));
 							break;
 					}
 			string act = "1";
